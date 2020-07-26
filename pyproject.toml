@@ -1,0 +1,11 @@
+[build-system]
+requires = ["flit_core >=2,<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.flit.metadata]
+module = "yaml2jsonnet"
+author = "Nathaniel Waisbrot"
+author-email = "code@waisbrot.net"
+home-page = "https://code.waisbrot.net"
+classifiers = ["License :: OSI Approved :: GNU Affero General Public License v3"]
+

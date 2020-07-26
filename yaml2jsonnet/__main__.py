@@ -1,7 +1,5 @@
-import sys
-
-from yaml2jsonnet.yaml2jsonnet import fib
+from yaml2jsonnet.cli import parse_args, run
 
 if __name__ == "__main__":
-    n = int(sys.argv[1])
-    print(fib(n))
+    args = parse_args()
+    run(args)
