@@ -1,6 +1,7 @@
 import functools
 import logging
 import re
+import textwrap
 
 from ruamel.yaml.events import (
     DocumentEndEvent,
@@ -16,8 +17,28 @@ from ruamel.yaml.events import (
 
 re_true: re.Pattern = re.compile(r"(?:true|yes|on)", re.IGNORECASE)
 re_false = re.compile(r"(?:false|no|off)", re.IGNORECASE)
-re_unescaped_key = re.compile(r"[a-zA-Z][a-zA-Z0-9]*")
+re_unescaped_key = re.compile(r"[_a-zA-Z][_a-zA-Z0-9]*")
 re_newline_comment = re.compile(r"^\s*[\n\r]\s*#")
+
+reserved_words = [
+    "assert",
+    "else",
+    "error",
+    "false",
+    "for",
+    "function",
+    "if",
+    "import",
+    "importstr",
+    "in",
+    "local",
+    "null",
+    "tailstrict",
+    "then",
+    "self",
+    "super",
+    "true",
+]
 
 log = logging.getLogger(__name__)
 
@@ -45,6 +66,13 @@ class WrongStateOnPop(RenderConversionError):
             renderer,
             f"Did not get the expected state {expected} on the top of the queue",
             event,
+        )
+
+
+class MultipleDocumentsError(RenderConversionError):
+    def __init__(self, renderer, event):
+        super().__init__(
+            renderer, "Expecting a single document but got multiple", event
         )
 
 
@@ -92,6 +120,7 @@ class JsonnetRenderer:
         self.current_document = []
         self.document_count = 0
         self.trailing_comments = []
+        self.document_array = True
 
     def really_write(self, string):
         self.output.write(string)
@@ -119,7 +148,7 @@ class JsonnetRenderer:
         if re_newline_comment.match(comment):
             self.trailing_comments.append("\n")
         comment = comment.lstrip(" #\t\n\r")
-        self.trailing_comments.append("//")
+        self.trailing_comments.append("// ")
         self.trailing_comments.append(comment)
         self.trailing_comments.append("\n")
 
@@ -149,11 +178,15 @@ class JsonnetRenderer:
             self.write("true")
         elif re_false.fullmatch(scalar):
             self.write("false")
+        elif len(scalar) > 80 and "\n" in scalar:
+            self.write("|||\n")
+            self.write(textwrap.indent(scalar, " "))
+            self.write("\n|||")
         else:
             self.write(repr(scalar))
 
     def render_map_key(self, scalar: str) -> None:
-        if re_unescaped_key.fullmatch(scalar):
+        if re_unescaped_key.fullmatch(scalar) and scalar not in reserved_words:
             self.write(scalar)
         else:
             self.write("[" + repr(scalar) + "]")
@@ -173,6 +206,8 @@ class JsonnetRenderer:
                 self.state = self.s_stream
                 # Render a stream as a Jsonnet list
                 self.write("/* top-level stream of documents */\n")
+                if self.document_array:
+                    self.write("[\n")
             else:
                 raise UnhandledEventError(self, event)
 
@@ -182,9 +217,11 @@ class JsonnetRenderer:
             event = yield
             if isinstance(event, DocumentStartEvent):
                 if self.document_count > 0:
-                    self.really_write("[")  # prepend a list
-                    self.write(",")
-                    self.write_current_document()
+                    if self.document_array:
+                        self.write(",")
+                        self.write_current_document()
+                    else:
+                        raise MultipleDocumentsError(self, event)
                 self.document_count += 1
                 self.queue.append((event, self.state))
                 self.state = self.s_document
@@ -193,7 +230,7 @@ class JsonnetRenderer:
             elif isinstance(event, StreamEndEvent):
                 self.pop_state(StreamStartEvent, event)
                 self.write_current_document()
-                if self.document_count > 1:
+                if self.document_array:
                     self.really_write("]\n")
             else:
                 raise UnhandledEventError(self, event)
