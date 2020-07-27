@@ -9,3 +9,20 @@ author-email = "code@waisbrot.net"
 home-page = "https://code.waisbrot.net"
 classifiers = ["License :: OSI Approved :: GNU Affero General Public License v3"]
 
+[tool.poetry]
+name = "yaml2jsonnet"
+version = "0.1.0"
+description = ""
+authors = ["Nathaniel Waisbrot <code@waisbrot.net>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+"ruamel.yaml" = "^0.16.10"
+
+[tool.poetry.dev-dependencies]
+pytest = "^4"
+black = "^19.10b0"
+isort = "^5"
+flake8 = "^3"
+mypy = "^0.782"
+pytest-cov = "^2.10.0"

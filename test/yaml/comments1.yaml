@@ -1,0 +1,10 @@
+# My YAML file, dot-yml
+# It's going to be pretty cool
+- hello
+  # let's make the next piece a map
+- planet:
+    # not sure what else to say about it
+    name: world
+    system: sol # capitalize the s?
+- end: true 
+# That's it!
