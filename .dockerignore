@@ -2,6 +2,6 @@
 **
 
 # ... except for dependencies and source
-!Pipfile
-!Pipfile.lock
+!pyproject.toml
+!poetry.lock
 !yaml2jsonnet

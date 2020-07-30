@@ -1,3 +1,7 @@
+"""
+Most of the work of the package -- renders a stream of ruamel events into Jsonnet
+"""
+
 import functools
 import logging
 import re
@@ -15,11 +19,24 @@ from ruamel.yaml.events import (
     StreamStartEvent,
 )
 
+"""Regex for converting YAML true boolean to JSON"""
 re_true: re.Pattern = re.compile(r"(?:true|yes|on)", re.IGNORECASE)
+
+"""Regex for converting YAML false boolean to JSON"""
 re_false = re.compile(r"(?:false|no|off)", re.IGNORECASE)
+
+"""Regex for testing if a string can be used as Jsonnet key without escaping"""
 re_unescaped_key = re.compile(r"[_a-zA-Z][_a-zA-Z0-9]*")
+
+"""Regex for checking if a comment starts with a newline (starting with a newline
+means that it gets a line of its own, instead of being a trailing comment)"""
 re_newline_comment = re.compile(r"^\s*[\n\r]\s*#")
 
+"""Regex for replacing Python's default \x0a repr with a unicode version"""
+re_low_ascii_replace = re.compile(r"\\x([0-9a-f]{2})")
+
+"""Jsonnet reserved words. Can't use them as map keys.
+https://jsonnet.org/ref/spec.html#lexing"""
 reserved_words = [
     "assert",
     "else",
@@ -44,6 +61,8 @@ log = logging.getLogger(__name__)
 
 
 class RenderConversionError(RuntimeError):
+    """Base class for errors when rendering the event-stream into Jsonnet"""
+
     def __init__(self, renderer, msg, event):
         self.message = msg
         self.event = event
@@ -56,11 +75,15 @@ class RenderConversionError(RuntimeError):
 
 
 class UnhandledEventError(RenderConversionError):
+    """The current state doesn't handle the current event. Programmer error."""
+
     def __init__(self, renderer, event):
         super().__init__(renderer, "Event was not handled by the current state", event)
 
 
 class WrongStateOnPop(RenderConversionError):
+    """The state,event pair being popped off the stack did not match. Programmer error."""
+
     def __init__(self, renderer, expected, event):
         super().__init__(
             renderer,
@@ -70,6 +93,8 @@ class WrongStateOnPop(RenderConversionError):
 
 
 class MultipleDocumentsError(RenderConversionError):
+    """Renderer was expecting a single document but got multiple. User error."""
+
     def __init__(self, renderer, event):
         super().__init__(
             renderer, "Expecting a single document but got multiple", event
@@ -89,6 +114,8 @@ def prime(func):
 
 
 class PDQueue(list):
+    """Just a list, but subclassed to give a pretty-printer for debugging"""
+
     def __str__(self):
         return (
             "["
@@ -106,7 +133,10 @@ class PDQueue(list):
 
 
 class JsonnetRenderer:
-    def __init__(self, events, output):
+    """Main class. Represents a deterministic pushdown automoton."""
+
+    def __init__(self, events, output, document_array=True):
+        """Most of the initialization is to create consumers for the various states."""
         self.events = events
         self.output = output
         self.queue = PDQueue()
@@ -120,26 +150,33 @@ class JsonnetRenderer:
         self.current_document = []
         self.document_count = 0
         self.trailing_comments = []
-        self.document_array = True
+        self.document_array = document_array
 
     def really_write(self, string):
+        """Write a string to the output"""
         self.output.write(string)
 
     def write_current_document(self):
+        """Dump the current_document buffer to the output"""
         [self.really_write(s) for s in self.current_document]
         self.current_document = []
 
     def write_trailing_comments(self):
+        """Write any pending comments into to the current_document buffer"""
         [self.write(comment) for comment in self.trailing_comments]
         self.trailing_comments = []
 
     def write(self, string):
+        """Write a string into the current_document buffer"""
         self.current_document.append(string)
 
     def remove_trailing_comma(self):
+        """Strip the trailing comma from the current_document buffer"""
         self.current_document[-1] = self.current_document[-1].rstrip(",\n ")
 
     def queue_comment(self, comment):
+        """Expects the comment attr of an Event. If there are any comments,
+        put them into the pending comments queue"""
         if comment is None:
             return
         if isinstance(comment, list):
@@ -152,7 +189,8 @@ class JsonnetRenderer:
         self.trailing_comments.append(comment)
         self.trailing_comments.append("\n")
 
-    def render(self):
+    def render(self) -> None:
+        """Begin evaluating, reading from the events and writing to the output until done"""
         self.state = self.s_start
         for event in self.events:
             log.debug(
@@ -163,35 +201,45 @@ class JsonnetRenderer:
                 self.queue_comment(event.comment[1])
             self.state.send(event)
 
-    def render_scalar(self, scalar: str) -> None:
-        try:
-            self.write(repr(int(scalar)))
-            return
-        except ValueError:
-            pass
-        try:
-            self.write(repr(float(scalar)))
-            return
-        except ValueError:
-            pass
+    def render_scalar(self, scalar: str, quoted: bool) -> None:
+        """Given a string that might represent a number or boolean, render it to JSON"""
+        if not quoted:
+            try:
+                self.write(repr(int(scalar)))
+                return
+            except ValueError:
+                pass
+            try:
+                self.write(repr(float(scalar)))
+                return
+            except ValueError:
+                pass
         if re_true.fullmatch(scalar):
             self.write("true")
         elif re_false.fullmatch(scalar):
             self.write("false")
+        elif scalar == "null":
+            self.write(scalar)
         elif len(scalar) > 80 and "\n" in scalar:
             self.write("|||\n")
             self.write(textwrap.indent(scalar, " "))
             self.write("\n|||")
         else:
-            self.write(repr(scalar))
+            scalar = repr(scalar)
+            scalar = re_low_ascii_replace.sub(r"\\u00" + "\\1", scalar)
+            self.write(scalar)
 
     def render_map_key(self, scalar: str) -> None:
+        """Given a string that is a map-key, render it as Jsonnet (maybe escaping it)"""
         if re_unescaped_key.fullmatch(scalar) and scalar not in reserved_words:
             self.write(scalar)
         else:
-            self.write("[" + repr(scalar) + "]")
+            scalar = repr(scalar)
+            scalar = re_low_ascii_replace.sub(r"\\u00" + "\\1", scalar)
+            self.write(f"[{scalar}]")
 
     def pop_state(self, expectedPrior, event):
+        """Pop the top state off the stack. Assert that it is of the expected type"""
         prior = self.queue.pop()
         if not isinstance(prior[0], expectedPrior):
             raise WrongStateOnPop(self, expectedPrior, event)
@@ -260,8 +308,13 @@ class JsonnetRenderer:
         while True:
             event = yield
             if isinstance(event, ScalarEvent):
-                self.render_scalar(event.value)
+                self.render_scalar(event.value, quoted=(event.style is not None))
                 self.write(",")
+                self.write_trailing_comments()
+            elif isinstance(event, SequenceStartEvent):
+                self.queue.append((event, self.state))
+                self.state = self.s_sequence  # same state we're already in
+                self.write("[\n")
                 self.write_trailing_comments()
             elif isinstance(event, SequenceEndEvent):
                 self.pop_state(SequenceStartEvent, event)
@@ -295,7 +348,7 @@ class JsonnetRenderer:
         while True:
             event = yield
             if isinstance(event, ScalarEvent):
-                self.render_scalar(event.value)
+                self.render_scalar(event.value, quoted=(event.style is not None))
                 self.write(",")
                 self.write_trailing_comments()
                 self.state = self.s_mapping_key
