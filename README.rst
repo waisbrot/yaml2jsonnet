@@ -22,7 +22,8 @@ Development Setup
 * Install `Pre-commit`_
 * Run ``poetry install`` to install dependencies
 * Run ``poetry run python -m yaml2jsonnet /path/to/yaml`` to convert a file
-* Probably, run ``jsonnetfmt`` on the output 
+* Probably, run ``jsonnetfmt`` on the output, since the only whitespace I provide is newlines
+
 
 
 .. _YAML: https://yaml.org/

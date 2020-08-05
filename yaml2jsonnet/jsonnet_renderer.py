@@ -25,6 +25,8 @@ re_true: re.Pattern = re.compile(r"(?:true|yes|on)", re.IGNORECASE)
 """Regex for converting YAML false boolean to JSON"""
 re_false = re.compile(r"(?:false|no|off)", re.IGNORECASE)
 
+re_null = re.compile(r"(?:~|null|Null|NULL|)")
+
 """Regex for testing if a string can be used as Jsonnet key without escaping"""
 re_unescaped_key = re.compile(r"[_a-zA-Z][_a-zA-Z0-9]*")
 
@@ -214,13 +216,16 @@ class JsonnetRenderer:
                 return
             except ValueError:
                 pass
-        if re_true.fullmatch(scalar):
-            self.write("true")
-        elif re_false.fullmatch(scalar):
-            self.write("false")
-        elif scalar == "null":
-            self.write(scalar)
-        elif len(scalar) > 80 and "\n" in scalar:
+            if re_true.fullmatch(scalar):
+                self.write("true")
+                return
+            elif re_false.fullmatch(scalar):
+                self.write("false")
+                return
+            elif re_null.fullmatch(scalar):
+                self.write("null")
+                return
+        if len(scalar) > 80 and "\n" in scalar:
             self.write("|||\n")
             self.write(textwrap.indent(scalar, " "))
             self.write("\n|||")
