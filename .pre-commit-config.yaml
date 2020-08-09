@@ -13,7 +13,8 @@ repos:
     rev: v1.21.0
     hooks:
       - id: yamllint
-        args: [--format, parsable, --strict]
+        args: [--format, parsable]
+        exclude: 'test/*'
   - repo: local
     hooks:
       - id: isort
