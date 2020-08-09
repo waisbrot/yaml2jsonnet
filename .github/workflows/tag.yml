@@ -1,0 +1,59 @@
+---
+name: Publish docker image
+
+on:
+  push:
+    tags: "*"
+
+jobs:
+  test:   # is there a way to not copy/paste this?
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+
+      - name: Install dependencies with poetry
+        run: |
+          pip install poetry
+          poetry install
+
+      - run: poetry run isort --recursive --diff
+      - run: poetry run black --check .
+      - run: poetry run flake8
+      - run: poetry run mypy
+      - run: poetry run pytest --cov --cov-fail-under=75
+
+  pypi-publish:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+      - name: Build package
+        run: poetry build
+      - name: Publish package
+        run: |
+          poetry publish \
+            --username=__token__ \
+            --password=${{ secrets.PYPI_UPLOAD_TOKEN }}
+
+  docker-publish:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Publish to GitHub packages
+        uses: whoan/docker-build-with-cache-action@v2
+        with:
+          registry: docker.pkg.github.com
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          image_name: ${{ github.repository }}/yaml2jsonnet
