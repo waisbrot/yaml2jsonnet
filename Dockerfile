@@ -1,6 +1,7 @@
 FROM python:3.8-slim
 
 # Setup env
+WORKDIR /app
 ENV LANG C.UTF-8
 ENV LC_ALL C.UTF-8
 ENV PYTHONDONTWRITEBYTECODE 1
@@ -12,14 +13,14 @@ RUN pip install poetry
 RUN apt-get update && apt-get install -y --no-install-recommends gcc curl
 
 # Get jsonnet binary
-RUN curl -L ${JSONNET_URL} /tmp/jsonnet.tgz && \
+RUN curl -L ${JSONNET_URL} -o /tmp/jsonnet.tgz && \
     tar -C /tmp -xzf /tmp/jsonnet.tgz && \
     mv /tmp/jsonnet /tmp/jsonnetfmt /usr/bin/
 
 # Install python dependencies in /.venv
 COPY pyproject.toml .
 COPY poetry.lock .
-RUN poetry install
+RUN poetry install --no-dev
 
 # Install application into container
 COPY . .

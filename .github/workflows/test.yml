@@ -39,4 +39,4 @@ jobs:
 
       - name: Smoke test docker image
         run: |
-          docker run --rm yaml2jsonnet:test 10
+          docker run --rm yaml2jsonnet:test
