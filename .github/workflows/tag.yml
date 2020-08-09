@@ -10,17 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-
-      - name: Setup Python
+      - &python-init name: Setup Python
         uses: actions/setup-python@v1
         with:
           python-version: 3.8
-
-      - name: Install dependencies with poetry
+      - &python-deps name: Install Python dependencies
         run: |
           pip install poetry
           poetry install
-
       - run: poetry run isort --recursive --diff
       - run: poetry run black --check .
       - run: poetry run flake8
@@ -32,10 +29,8 @@ jobs:
     needs: test
     steps:
       - uses: actions/checkout@v2
-      - name: Setup Python
-        uses: actions/setup-python@v1
-        with:
-          python-version: 3.8
+      - *python-init
+      - *python-deps
       - name: Build package
         run: poetry build
       - name: Publish package
