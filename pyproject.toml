@@ -1,19 +1,23 @@
-[build-system]
-requires = ["flit_core >=2,<4"]
-build-backend = "flit_core.buildapi"
-
-[tool.flit.metadata]
-module = "yaml2jsonnet"
-author = "Nathaniel Waisbrot"
-author-email = "code@waisbrot.net"
-home-page = "https://code.waisbrot.net"
-classifiers = ["License :: OSI Approved :: GNU Affero General Public License v3"]
-
 [tool.poetry]
 name = "yaml2jsonnet"
 version = "0.1.0"
-description = ""
+description = "Convert from YAML to Jsonnet format, retaining comments"
+license = "AGPL-3.0-or-later"
 authors = ["Nathaniel Waisbrot <code@waisbrot.net>"]
+readme = "README.rst"
+repository = "https://github.com/waisbrot/yaml2jsonnet"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Operating System :: POSIX",
+    "Topic :: Software Development :: Compilers",
+    "Topic :: Utilities",
+]
+
+[tool.poetry.scripts]
+yaml2jsonnet = 'yaml2jsonnet'
 
 [tool.poetry.dependencies]
 python = "^3.8"
