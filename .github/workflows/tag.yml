@@ -6,31 +6,25 @@ on:
     tags: "*"
 
 jobs:
-  test:   # is there a way to not copy/paste this?
+  test-and-publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - &python-init name: Setup Python
+      - name: Setup Python
         uses: actions/setup-python@v1
         with:
           python-version: 3.8
-      - &python-deps name: Install Python dependencies
+      - name: Install Python dependencies
         run: |
           pip install poetry
           poetry install
-      - run: poetry run isort --recursive --diff
-      - run: poetry run black --check .
-      - run: poetry run flake8
-      - run: poetry run mypy
-      - run: poetry run pytest --cov --cov-fail-under=75
-
-  pypi-publish:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - uses: actions/checkout@v2
-      - *python-init
-      - *python-deps
+      - name: Run checks and tests
+        run: |
+          poetry run isort --recursive --diff
+          poetry run black --check .
+          poetry run flake8
+          poetry run mypy
+          poetry run pytest --cov --cov-fail-under=75
       - name: Build package
         run: poetry build
       - name: Publish package
@@ -41,10 +35,9 @@ jobs:
 
   docker-publish:
     runs-on: ubuntu-latest
-    needs: test
+    needs: test-and-publish
     steps:
       - uses: actions/checkout@v2
-
       - name: Publish to GitHub packages
         uses: whoan/docker-build-with-cache-action@v2
         with:
