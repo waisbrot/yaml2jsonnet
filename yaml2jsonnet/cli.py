@@ -26,3 +26,14 @@ def run(args: argparse.Namespace) -> None:
     log.debug("Read yaml into memory")
     yaml_data = args.yaml.read()
     convert_yaml(yaml_data, args.out)
+
+
+def main() -> None:
+    args = parse_args()
+    loglevel = logging.WARNING
+    if args.v > 0:
+        loglevel = logging.INFO
+    if args.v > 1:
+        loglevel = logging.DEBUG
+    logging.basicConfig(level=loglevel)
+    run(args)

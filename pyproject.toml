@@ -1,10 +1,10 @@
 [tool.poetry]
 name = "yaml2jsonnet"
-version = "0.6.0"
+version = "0.7.0"
 description = "Convert from YAML to Jsonnet format, retaining comments"
 license = "AGPL-3.0-or-later"
 authors = ["Nathaniel Waisbrot <code@waisbrot.net>"]
-readme = "README.rst"
+readme = "README.md"
 repository = "https://github.com/waisbrot/yaml2jsonnet"
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -17,7 +17,7 @@ classifiers = [
 ]
 
 [tool.poetry.scripts]
-yaml2jsonnet = 'yaml2jsonnet'
+yaml2jsonnet = 'yaml2jsonnet.cli:main'
 
 [tool.poetry.dependencies]
 python = "^3.8"
