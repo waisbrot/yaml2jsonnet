@@ -1,0 +1,7 @@
+[
+  // simple example
+  {
+    hello: 'world',
+    one: 1,
+  },
+]

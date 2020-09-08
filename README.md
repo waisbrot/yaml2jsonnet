@@ -9,9 +9,51 @@ they produce ugly-looking (but valid!) Jsonnet.
 YAML2Jsonnet makes the conversion a little easier: it transforms the YAML into *slightly* prettier Jsonnet, preserving
 comments along the way.
 
-## Examples
+## Example
 
-TODO
+A trivial YAML document:
+
+```
+---
+# simple example
+- hello: world
+  one: 1
+```
+
+Convert it to Jsonnet:
+
+```
+$ yaml2jsonnet trivial.yaml | jsonnetfmt - -o trivial.jsonnet
+```
+
+(Note that we run the output of yaml2jsonnet through the jsonnet formatter `jsonnetfmt`. This is _strongly_ recommended, since the
+raw output of yaml2jsonnet is quite ugly.)
+
+The result:
+
+```
+[
+  // simple example
+  {
+    hello: 'world',
+    one: 1,
+  },
+]
+```
+
+# Installing
+
+Yaml2Jsonnet expects Python 3.6 or above.
+
+```
+pip install yaml2jsonnet
+```
+
+Or, as this is meant as a stand-alone tool, you may prefer
+
+```
+pipx install yaml2jsonnet
+```
 
 ## Development
 
