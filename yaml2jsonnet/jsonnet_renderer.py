@@ -34,6 +34,10 @@ re_unescaped_key = re.compile(r"[_a-zA-Z][_a-zA-Z0-9]*")
 means that it gets a line of its own, instead of being a trailing comment)"""
 re_newline_comment = re.compile(r"^\s*[\n\r]\s*#")
 
+"""Assuming we already know that this string is a comment, this matches a second
+line of comment so that we can convert that appropriately."""
+re_multiline_comment = re.compile(r"(\n\s*#+)")
+
 """Regex for replacing Python's default \x0a repr with a unicode version"""
 re_low_ascii_replace = re.compile(r"\\x([0-9a-f]{2})")
 
@@ -137,7 +141,7 @@ class PDQueue(list):
 class JsonnetRenderer:
     """Main class. Represents a deterministic pushdown automoton."""
 
-    def __init__(self, events, output, document_array=True):
+    def __init__(self, events, output, document_array=True, inject_comments=False):
         """Most of the initialization is to create consumers for the various states."""
         self.events = events
         self.output = output
@@ -153,6 +157,7 @@ class JsonnetRenderer:
         self.document_count = 0
         self.trailing_comments = []
         self.document_array = document_array
+        self.inject_comments = inject_comments
 
     def really_write(self, string):
         """Write a string to the output"""
@@ -187,6 +192,7 @@ class JsonnetRenderer:
         if re_newline_comment.match(comment):
             self.trailing_comments.append("\n")
         comment = comment.lstrip(" #\t\n\r")
+        comment = re_multiline_comment.sub("\n//", comment)
         self.trailing_comments.append("// ")
         self.trailing_comments.append(comment)
         self.trailing_comments.append("\n")
@@ -258,7 +264,8 @@ class JsonnetRenderer:
                 self.queue.append((event, self.state))
                 self.state = self.s_stream
                 # Render a stream as a Jsonnet list
-                self.write("/* top-level stream of documents */\n")
+                if self.inject_comments:
+                    self.write("/* top-level stream of documents */\n")
                 if self.document_array:
                     self.write("[\n")
             else:
@@ -278,7 +285,8 @@ class JsonnetRenderer:
                 self.document_count += 1
                 self.queue.append((event, self.state))
                 self.state = self.s_document
-                self.write(f"/* document {self.document_count}*/\n")
+                if self.inject_comments:
+                    self.write(f"/* document {self.document_count}*/\n")
                 self.write_trailing_comments()
             elif isinstance(event, StreamEndEvent):
                 self.pop_state(StreamStartEvent, event)
