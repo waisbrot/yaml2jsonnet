@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "yaml2jsonnet"
-version = "0.7.0"
+version = "1.0.1"
 description = "Convert from YAML to Jsonnet format, retaining comments"
 license = "AGPL-3.0-or-later"
 authors = ["Nathaniel Waisbrot <code@waisbrot.net>"]
