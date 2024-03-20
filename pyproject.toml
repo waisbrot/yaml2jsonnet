@@ -25,7 +25,7 @@ python = "^3.8"
 
 [tool.poetry.dev-dependencies]
 pytest = "^4"
-black = "^19.10b0"
+black = "^24.3"
 isort = "^5"
 flake8 = "^3"
 mypy = "^0.782"
